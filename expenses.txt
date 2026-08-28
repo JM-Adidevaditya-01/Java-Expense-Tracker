@@ -1,5 +1,3 @@
-Rs.200.0 | Food | Lunch
-Rs.500.0 | Shopping | Clothes
 Rs.120.0 | Food | Dinner
 Rs.500.0 | Education | Books
 27-08-2026 15:26 | Rs.300.0 | Food | Pizza
