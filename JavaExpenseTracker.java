@@ -10,25 +10,75 @@ public class JavaExpenseTracker {
 
     public static void main(String[] args) {
 
+        // =========================
+        // MAIN WINDOW
+        // =========================
+
         JFrame frame = new JFrame("Java Expense Tracker");
 
-        frame.setSize(750, 550);
-        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setLayout(new FlowLayout());
+        frame.setSize(800, 600);
 
-        JLabel title = new JLabel("JAVA EXPENSE TRACKER");
+        frame.setDefaultCloseOperation(
+                JFrame.EXIT_ON_CLOSE
+        );
 
-        JLabel amountLabel = new JLabel("Amount:");
-        JTextField amountField = new JTextField(10);
+        frame.setLayout(
+                new BorderLayout(10, 10)
+        );
 
-        JLabel categoryLabel = new JLabel("Category:");
+        // =========================
+        // TITLE
+        // =========================
+
+        JLabel title = new JLabel(
+                "JAVA EXPENSE TRACKER",
+                SwingConstants.CENTER
+        );
+
+        title.setFont(
+                new Font("Arial", Font.BOLD, 24)
+        );
+
+        title.setBorder(
+                BorderFactory.createEmptyBorder(
+                        15, 10, 10, 10
+                )
+        );
+
+        frame.add(
+                title,
+                BorderLayout.NORTH
+        );
+
+        // =========================
+        // INPUT PANEL
+        // =========================
+
+        JPanel inputPanel = new JPanel(
+                new GridLayout(4, 2, 10, 10)
+        );
+
+        inputPanel.setBorder(
+                BorderFactory.createEmptyBorder(
+                        10, 30, 10, 30
+                )
+        );
+
+        JLabel amountLabel =
+                new JLabel("Amount:");
+
+        JTextField amountField =
+                new JTextField();
+
+        JLabel categoryLabel =
+                new JLabel("Category:");
 
         String[] categories = {
-            "Food",
-            "Travel",
-            "Shopping",
-            "Education",
-            "Other"
+                "Food",
+                "Travel",
+                "Shopping",
+                "Education",
+                "Other"
         };
 
         JComboBox<String> categoryBox =
@@ -38,7 +88,7 @@ public class JavaExpenseTracker {
                 new JLabel("Description:");
 
         JTextField descriptionField =
-                new JTextField(15);
+                new JTextField();
 
         JButton addButton =
                 new JButton("Add Expense");
@@ -46,8 +96,21 @@ public class JavaExpenseTracker {
         JButton deleteButton =
                 new JButton("Delete Expense");
 
-        JLabel totalLabel =
-                new JLabel("Total Expense: Rs.0.0");
+        inputPanel.add(amountLabel);
+        inputPanel.add(amountField);
+
+        inputPanel.add(categoryLabel);
+        inputPanel.add(categoryBox);
+
+        inputPanel.add(descriptionLabel);
+        inputPanel.add(descriptionField);
+
+        inputPanel.add(addButton);
+        inputPanel.add(deleteButton);
+
+        // =========================
+        // EXPENSE LIST
+        // =========================
 
         DefaultListModel<String> expenseModel =
                 new DefaultListModel<>();
@@ -55,20 +118,86 @@ public class JavaExpenseTracker {
         JList<String> expenseList =
                 new JList<>(expenseModel);
 
+        expenseList.setFont(
+                new Font("Arial", Font.PLAIN, 14)
+        );
+
         JScrollPane scrollPane =
                 new JScrollPane(expenseList);
 
-        scrollPane.setPreferredSize(
-                new Dimension(650, 300)
+        scrollPane.setBorder(
+                BorderFactory.createTitledBorder(
+                        "Expenses"
+                )
         );
 
-        final double[] totalExpense = {0};
+        // =========================
+        // CENTER PANEL
+        // =========================
 
-        // DATE AND TIME FORMAT
+        JPanel centerPanel =
+                new JPanel(new BorderLayout(10, 10));
+
+        centerPanel.setBorder(
+                BorderFactory.createEmptyBorder(
+                        0, 20, 0, 20
+                )
+        );
+
+        centerPanel.add(
+                inputPanel,
+                BorderLayout.NORTH
+        );
+
+        centerPanel.add(
+                scrollPane,
+                BorderLayout.CENTER
+        );
+
+        frame.add(
+                centerPanel,
+                BorderLayout.CENTER
+        );
+
+        // =========================
+        // TOTAL LABEL
+        // =========================
+
+        JLabel totalLabel =
+                new JLabel(
+                        "Total Expense: Rs.0.0",
+                        SwingConstants.CENTER
+                );
+
+        totalLabel.setFont(
+                new Font("Arial", Font.BOLD, 18)
+        );
+
+        totalLabel.setBorder(
+                BorderFactory.createEmptyBorder(
+                        10, 10, 15, 10
+                )
+        );
+
+        frame.add(
+                totalLabel,
+                BorderLayout.SOUTH
+        );
+
+        // =========================
+        // DATE FORMAT
+        // =========================
+
         DateTimeFormatter formatter =
                 DateTimeFormatter.ofPattern(
                         "dd-MM-yyyy HH:mm"
                 );
+
+        // =========================
+        // TOTAL EXPENSE
+        // =========================
+
+        final double[] totalExpense = {0};
 
         // =========================
         // LOAD SAVED EXPENSES
@@ -94,8 +223,7 @@ public class JavaExpenseTracker {
                 double amount =
                         getAmountFromExpense(line);
 
-                totalExpense[0] =
-                        totalExpense[0] + amount;
+                totalExpense[0] += amount;
             }
 
             reader.close();
@@ -103,8 +231,6 @@ public class JavaExpenseTracker {
         } catch (IOException e) {
 
             // File does not exist yet.
-            // It will be created when the first
-            // expense is added.
         }
 
         totalLabel.setText(
@@ -136,8 +262,8 @@ public class JavaExpenseTracker {
                 }
 
                 String category =
-                        (String) categoryBox
-                                .getSelectedItem();
+                        (String)
+                        categoryBox.getSelectedItem();
 
                 String description =
                         descriptionField.getText();
@@ -148,36 +274,33 @@ public class JavaExpenseTracker {
                             "No description";
                 }
 
-                // GET CURRENT DATE AND TIME
                 String dateTime =
                         LocalDateTime.now()
                                 .format(formatter);
 
-                // CREATE EXPENSE
                 String expense =
                         dateTime
                         + " | Rs." + amount
                         + " | " + category
                         + " | " + description;
 
-                // ADD TO LIST
-                expenseModel.addElement(expense);
+                expenseModel.addElement(
+                        expense
+                );
 
-                // UPDATE TOTAL
-                totalExpense[0] =
-                        totalExpense[0] + amount;
+                totalExpense[0] += amount;
 
                 totalLabel.setText(
                         "Total Expense: Rs."
                         + totalExpense[0]
                 );
 
-                // CLEAR INPUT FIELDS
                 amountField.setText("");
                 descriptionField.setText("");
 
-                // SAVE TO FILE
-                saveExpenses(expenseModel);
+                saveExpenses(
+                        expenseModel
+                );
 
             } catch (NumberFormatException ex) {
 
@@ -209,23 +332,20 @@ public class JavaExpenseTracker {
                                 selectedExpense
                         );
 
-                // UPDATE TOTAL
-                totalExpense[0] =
-                        totalExpense[0] - amount;
+                totalExpense[0] -= amount;
 
-                // REMOVE EXPENSE
                 expenseModel.remove(
                         selectedIndex
                 );
 
-                // UPDATE TOTAL LABEL
                 totalLabel.setText(
                         "Total Expense: Rs."
                         + totalExpense[0]
                 );
 
-                // SAVE UPDATED LIST
-                saveExpenses(expenseModel);
+                saveExpenses(
+                        expenseModel
+                );
 
             } else {
 
@@ -237,26 +357,14 @@ public class JavaExpenseTracker {
         });
 
         // =========================
-        // ADD COMPONENTS TO FRAME
+        // CENTER WINDOW
         // =========================
 
-        frame.add(title);
+        frame.setLocationRelativeTo(null);
 
-        frame.add(amountLabel);
-        frame.add(amountField);
-
-        frame.add(categoryLabel);
-        frame.add(categoryBox);
-
-        frame.add(descriptionLabel);
-        frame.add(descriptionField);
-
-        frame.add(addButton);
-        frame.add(deleteButton);
-
-        frame.add(totalLabel);
-
-        frame.add(scrollPane);
+        // =========================
+        // SHOW WINDOW
+        // =========================
 
         frame.setVisible(true);
     }
@@ -273,28 +381,22 @@ public class JavaExpenseTracker {
             String[] parts =
                     expense.split(" \\| ");
 
-            /*
-             * Old format:
-             * Rs.200.0 | Food | Lunch
-             *
-             * New format:
-             * 27-08-2026 14:30 | Rs.200.0 | Food | Lunch
-             */
+            // Old format:
+            // Rs.200.0 | Food | Lunch
 
             if (parts[0].startsWith("Rs.")) {
 
-                // OLD FORMAT
                 return Double.parseDouble(
                         parts[0].substring(3)
                 );
-
-            } else {
-
-                // NEW FORMAT
-                return Double.parseDouble(
-                        parts[1].substring(3)
-                );
             }
+
+            // New format:
+            // date | Rs.200.0 | Food | Lunch
+
+            return Double.parseDouble(
+                    parts[1].substring(3)
+            );
 
         } catch (Exception e) {
 
