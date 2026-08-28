@@ -96,6 +96,9 @@ public class JavaExpenseTracker {
         JButton deleteButton =
                 new JButton("Delete Expense");
 
+        JButton editButton =
+                new JButton("Edit Expense");
+
         inputPanel.add(amountLabel);
         inputPanel.add(amountField);
 
@@ -152,6 +155,20 @@ public class JavaExpenseTracker {
         centerPanel.add(
                 scrollPane,
                 BorderLayout.CENTER
+        );
+
+        // =========================
+        // EDIT BUTTON PANEL
+        // =========================
+
+        JPanel editPanel =
+                new JPanel(new FlowLayout());
+
+        editPanel.add(editButton);
+
+        centerPanel.add(
+                editPanel,
+                BorderLayout.SOUTH
         );
 
         frame.add(
@@ -239,6 +256,45 @@ public class JavaExpenseTracker {
         );
 
         // =========================
+        // SELECT EXPENSE
+        // =========================
+
+        expenseList.addListSelectionListener(e -> {
+
+            if (!e.getValueIsAdjusting()) {
+
+                int selectedIndex =
+                        expenseList.getSelectedIndex();
+
+                if (selectedIndex != -1) {
+
+                    String selectedExpense =
+                            expenseModel.getElementAt(
+                                    selectedIndex
+                            );
+
+                    amountField.setText(
+                            getAmountFromExpenseAsText(
+                                    selectedExpense
+                            )
+                    );
+
+                    categoryBox.setSelectedItem(
+                            getCategoryFromExpense(
+                                    selectedExpense
+                            )
+                    );
+
+                    descriptionField.setText(
+                            getDescriptionFromExpense(
+                                    selectedExpense
+                            )
+                    );
+                }
+            }
+        });
+
+        // =========================
         // ADD EXPENSE
         // =========================
 
@@ -266,7 +322,7 @@ public class JavaExpenseTracker {
                         categoryBox.getSelectedItem();
 
                 String description =
-                        descriptionField.getText();
+                        descriptionField.getText().trim();
 
                 if (description.isEmpty()) {
 
@@ -297,6 +353,8 @@ public class JavaExpenseTracker {
 
                 amountField.setText("");
                 descriptionField.setText("");
+
+                expenseList.clearSelection();
 
                 saveExpenses(
                         expenseModel
@@ -343,6 +401,9 @@ public class JavaExpenseTracker {
                         + totalExpense[0]
                 );
 
+                amountField.setText("");
+                descriptionField.setText("");
+
                 saveExpenses(
                         expenseModel
                 );
@@ -352,6 +413,117 @@ public class JavaExpenseTracker {
                 JOptionPane.showMessageDialog(
                         frame,
                         "Please select an expense to delete!"
+                );
+            }
+        });
+
+        // =========================
+        // EDIT EXPENSE
+        // =========================
+
+        editButton.addActionListener(e -> {
+
+            int selectedIndex =
+                    expenseList.getSelectedIndex();
+
+            if (selectedIndex == -1) {
+
+                JOptionPane.showMessageDialog(
+                        frame,
+                        "Please select an expense to edit!"
+                );
+
+                return;
+            }
+
+            try {
+
+                double oldAmount =
+                        getAmountFromExpense(
+                                expenseModel.getElementAt(
+                                        selectedIndex
+                                )
+                        );
+
+                double newAmount =
+                        Double.parseDouble(
+                                amountField.getText()
+                        );
+
+                if (newAmount <= 0) {
+
+                    JOptionPane.showMessageDialog(
+                            frame,
+                            "Amount must be greater than 0!"
+                    );
+
+                    return;
+                }
+
+                String category =
+                        (String)
+                        categoryBox.getSelectedItem();
+
+                String description =
+                        descriptionField.getText().trim();
+
+                if (description.isEmpty()) {
+
+                    description =
+                            "No description";
+                }
+
+                String oldExpense =
+                        expenseModel.getElementAt(
+                                selectedIndex
+                        );
+
+                String dateTime =
+                        getDateTimeFromExpense(
+                                oldExpense,
+                                formatter
+                        );
+
+                String updatedExpense =
+                        dateTime
+                        + " | Rs." + newAmount
+                        + " | " + category
+                        + " | " + description;
+
+                expenseModel.setElementAt(
+                        updatedExpense,
+                        selectedIndex
+                );
+
+                totalExpense[0] =
+                        totalExpense[0]
+                        - oldAmount
+                        + newAmount;
+
+                totalLabel.setText(
+                        "Total Expense: Rs."
+                        + totalExpense[0]
+                );
+
+                amountField.setText("");
+                descriptionField.setText("");
+
+                expenseList.clearSelection();
+
+                saveExpenses(
+                        expenseModel
+                );
+
+                JOptionPane.showMessageDialog(
+                        frame,
+                        "Expense updated successfully!"
+                );
+
+            } catch (NumberFormatException ex) {
+
+                JOptionPane.showMessageDialog(
+                        frame,
+                        "Please enter a valid amount!"
                 );
             }
         });
@@ -370,7 +542,7 @@ public class JavaExpenseTracker {
     }
 
     // =========================
-    // GET AMOUNT FROM EXPENSE
+    // GET AMOUNT
     // =========================
 
     static double getAmountFromExpense(
@@ -379,7 +551,7 @@ public class JavaExpenseTracker {
         try {
 
             String[] parts =
-                    expense.split(" \\| ");
+                    expense.split("\\s*\\|\\s*");
 
             // Old format:
             // Rs.200.0 | Food | Lunch
@@ -402,6 +574,122 @@ public class JavaExpenseTracker {
 
             return 0;
         }
+    }
+
+    // =========================
+    // GET AMOUNT AS TEXT
+    // =========================
+
+    static String getAmountFromExpenseAsText(
+            String expense) {
+
+        double amount =
+                getAmountFromExpense(expense);
+
+        return String.valueOf(amount);
+    }
+
+    // =========================
+    // GET CATEGORY
+    // =========================
+
+    static String getCategoryFromExpense(
+            String expense) {
+
+        try {
+
+            String[] parts =
+                    expense.split("\\s*\\|\\s*");
+
+            // Old format:
+            // Rs.200.0 | Food | Lunch
+
+            if (parts[0].startsWith("Rs.")) {
+
+                return parts[1];
+            }
+
+            // New format:
+            // date | Rs.200.0 | Food | Lunch
+
+            return parts[2];
+
+        } catch (Exception e) {
+
+            return "Other";
+        }
+    }
+
+    // =========================
+    // GET DESCRIPTION
+    // =========================
+
+    static String getDescriptionFromExpense(
+            String expense) {
+
+        try {
+
+            String[] parts =
+                    expense.split("\\s*\\|\\s*");
+
+            // Old format
+
+            if (parts[0].startsWith("Rs.")) {
+
+                if (parts.length >= 3) {
+
+                    return parts[2];
+                }
+
+                return "";
+            }
+
+            // New format
+
+            if (parts.length >= 4) {
+
+                return parts[3];
+            }
+
+            return "";
+
+        } catch (Exception e) {
+
+            return "";
+        }
+    }
+
+    // =========================
+    // GET DATE/TIME
+    // =========================
+
+    static String getDateTimeFromExpense(
+            String expense,
+            DateTimeFormatter formatter) {
+
+        try {
+
+            String[] parts =
+                    expense.split("\\s*\\|\\s*");
+
+            // New format:
+            // date | Rs.200.0 | Food | Lunch
+
+            if (!parts[0].startsWith("Rs.")) {
+
+                return parts[0];
+            }
+
+        } catch (Exception e) {
+
+            // Ignore and use current date/time.
+        }
+
+        // Old-format expense
+        // gets a date/time when edited.
+
+        return LocalDateTime.now()
+                .format(formatter);
     }
 
     // =========================

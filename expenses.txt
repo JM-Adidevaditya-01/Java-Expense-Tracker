@@ -1,5 +1,5 @@
-Rs.120.0 | Food | Dinner
-Rs.500.0 | Education | Books
+28-08-2026 13:32 | Rs.120.0 | Food | Dinner
+28-08-2026 13:32 | Rs.500.0 | Education | Books
 27-08-2026 15:26 | Rs.300.0 | Food | Pizza
 28-08-2026 13:17 | Rs.500.0 | Shopping | Clothes
 28-08-2026 13:19 | Rs.250.0 | Food | MOMO
