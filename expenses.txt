@@ -3,3 +3,7 @@
 27-08-2026 15:26 | Rs.300.0 | Food | Pizza
 28-08-2026 13:17 | Rs.500.0 | Shopping | Clothes
 28-08-2026 13:19 | Rs.250.0 | Food | MOMO
+28-08-2026 14:27 | Rs.3000.0 | Education | INSTITUTE
+28-08-2026 14:27 | Rs.500.0 | Food | COFFEE
+28-08-2026 15:08 | Rs.780.0 | Bills | NETFLIX
+28-08-2026 15:23 | Rs.1900.0 | Education | GPT
