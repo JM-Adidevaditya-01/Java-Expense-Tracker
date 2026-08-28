@@ -1,103 +1,128 @@
 import javax.swing.*;
 import java.awt.*;
+import java.awt.event.*;
 import java.io.*;
-import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
+import java.text.SimpleDateFormat;
+import java.util.*;
 
-public class JavaExpenseTracker {
+public class JavaExpenseTracker extends JFrame {
 
-    static final String FILE_NAME = "expenses.txt";
+    // =========================
+    // Expense class
+    // =========================
+    static class Expense {
+        String date;
+        double amount;
+        String category;
+        String description;
 
-    public static void main(String[] args) {
+        Expense(String date, double amount, String category, String description) {
+            this.date = date;
+            this.amount = amount;
+            this.category = category;
+            this.description = description;
+        }
+
+        @Override
+        public String toString() {
+            return date + " | Rs." + amount + " | " + category + " | " + description;
+        }
+    }
+
+    // =========================
+    // Variables
+    // =========================
+    private ArrayList<Expense> expenses = new ArrayList<>();
+
+    private JTextField amountField;
+    private JComboBox<String> categoryBox;
+    private JTextField descriptionField;
+
+    private JTextField searchField;
+    private JComboBox<String> filterCategoryBox;
+    private JTextField dateFilterField;
+
+    private JTextArea expenseArea;
+    private JLabel totalLabel;
+
+    private int selectedExpenseIndex = -1;
+
+    private final String FILE_NAME = "expenses.txt";
+
+    // =========================
+    // Constructor
+    // =========================
+    public JavaExpenseTracker() {
+
+        setTitle("Java Expense Tracker");
+        setSize(1000, 780);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        setLocationRelativeTo(null);
+
+        loadExpenses();
+
+        createGUI();
+
+        refreshExpenseArea();
+    }
+
+    // =========================
+    // GUI
+    // =========================
+    private void createGUI() {
+
+        JPanel mainPanel = new JPanel(new BorderLayout(10, 10));
+        mainPanel.setBorder(BorderFactory.createEmptyBorder(15, 20, 15, 20));
 
         // =========================
-        // MAIN WINDOW
+        // Title
         // =========================
+        JLabel titleLabel = new JLabel("JAVA EXPENSE TRACKER");
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 30));
+        titleLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-        JFrame frame = new JFrame("Java Expense Tracker");
-
-        frame.setSize(800, 600);
-
-        frame.setDefaultCloseOperation(
-                JFrame.EXIT_ON_CLOSE
-        );
-
-        frame.setLayout(
-                new BorderLayout(10, 10)
-        );
+        mainPanel.add(titleLabel, BorderLayout.NORTH);
 
         // =========================
-        // TITLE
+        // Center panel
         // =========================
-
-        JLabel title = new JLabel(
-                "JAVA EXPENSE TRACKER",
-                SwingConstants.CENTER
-        );
-
-        title.setFont(
-                new Font("Arial", Font.BOLD, 24)
-        );
-
-        title.setBorder(
-                BorderFactory.createEmptyBorder(
-                        15, 10, 10, 10
-                )
-        );
-
-        frame.add(
-                title,
-                BorderLayout.NORTH
-        );
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
 
         // =========================
-        // INPUT PANEL
+        // Input panel
         // =========================
+        JPanel inputPanel = new JPanel(new GridLayout(4, 2, 10, 10));
+        inputPanel.setBorder(BorderFactory.createEmptyBorder(20, 30, 10, 30));
 
-        JPanel inputPanel = new JPanel(
-                new GridLayout(4, 2, 10, 10)
-        );
+        JLabel amountLabel = new JLabel("Amount:");
+        amountLabel.setFont(new Font("Arial", Font.BOLD, 15));
 
-        inputPanel.setBorder(
-                BorderFactory.createEmptyBorder(
-                        10, 30, 10, 30
-                )
-        );
+        amountField = new JTextField();
 
-        JLabel amountLabel =
-                new JLabel("Amount:");
-
-        JTextField amountField =
-                new JTextField();
-
-        JLabel categoryLabel =
-                new JLabel("Category:");
+        JLabel categoryLabel = new JLabel("Category:");
+        categoryLabel.setFont(new Font("Arial", Font.BOLD, 15));
 
         String[] categories = {
                 "Food",
-                "Travel",
                 "Shopping",
                 "Education",
+                "Transport",
+                "Entertainment",
+                "Bills",
+                "Health",
                 "Other"
         };
 
-        JComboBox<String> categoryBox =
-                new JComboBox<>(categories);
+        categoryBox = new JComboBox<>(categories);
 
-        JLabel descriptionLabel =
-                new JLabel("Description:");
+        JLabel descriptionLabel = new JLabel("Description:");
+        descriptionLabel.setFont(new Font("Arial", Font.BOLD, 15));
 
-        JTextField descriptionField =
-                new JTextField();
+        descriptionField = new JTextField();
 
-        JButton addButton =
-                new JButton("Add Expense");
-
-        JButton deleteButton =
-                new JButton("Delete Expense");
-
-        JButton editButton =
-                new JButton("Edit Expense");
+        JButton addButton = new JButton("Add Expense");
+        JButton editButton = new JButton("Edit Expense");
 
         inputPanel.add(amountLabel);
         inputPanel.add(amountField);
@@ -109,621 +134,652 @@ public class JavaExpenseTracker {
         inputPanel.add(descriptionField);
 
         inputPanel.add(addButton);
-        inputPanel.add(deleteButton);
+        inputPanel.add(editButton);
+
+        centerPanel.add(inputPanel);
 
         // =========================
-        // EXPENSE LIST
+        // Delete button
         // =========================
+        JPanel actionPanel = new JPanel(new FlowLayout());
 
-        DefaultListModel<String> expenseModel =
-                new DefaultListModel<>();
+        JButton deleteButton = new JButton("Delete Expense");
+        JButton clearButton = new JButton("Clear Selection");
 
-        JList<String> expenseList =
-                new JList<>(expenseModel);
+        actionPanel.add(deleteButton);
+        actionPanel.add(clearButton);
 
-        expenseList.setFont(
-                new Font("Arial", Font.PLAIN, 14)
+        centerPanel.add(actionPanel);
+
+        // =========================
+        // Search / Filter panel
+        // =========================
+        JPanel filterPanel = new JPanel(new GridLayout(2, 3, 10, 5));
+        filterPanel.setBorder(
+                BorderFactory.createTitledBorder("Search & Filter")
         );
 
-        JScrollPane scrollPane =
-                new JScrollPane(expenseList);
+        JLabel searchLabel = new JLabel("Search Description:");
+        JLabel categoryFilterLabel = new JLabel("Category:");
+        JLabel dateFilterLabel = new JLabel("Date (dd-MM-yyyy):");
 
-        scrollPane.setBorder(
-                BorderFactory.createTitledBorder(
-                        "Expenses"
-                )
+        searchField = new JTextField();
+
+        String[] filterCategories = {
+                "All Categories",
+                "Food",
+                "Shopping",
+                "Education",
+                "Transport",
+                "Entertainment",
+                "Bills",
+                "Health",
+                "Other"
+        };
+
+        filterCategoryBox = new JComboBox<>(filterCategories);
+
+        dateFilterField = new JTextField();
+
+        filterPanel.add(searchLabel);
+        filterPanel.add(categoryFilterLabel);
+        filterPanel.add(dateFilterLabel);
+
+        filterPanel.add(searchField);
+        filterPanel.add(filterCategoryBox);
+        filterPanel.add(dateFilterField);
+
+        centerPanel.add(filterPanel);
+
+        // =========================
+        // Expense area
+        // =========================
+        expenseArea = new JTextArea();
+        expenseArea.setEditable(false);
+        expenseArea.setFont(new Font("Monospaced", Font.PLAIN, 15));
+        expenseArea.setLineWrap(false);
+
+        JScrollPane scrollPane = new JScrollPane(expenseArea);
+
+        JPanel expensePanel = new JPanel(new BorderLayout());
+        expensePanel.setBorder(
+                BorderFactory.createTitledBorder("Expenses")
         );
 
-        // =========================
-        // CENTER PANEL
-        // =========================
+        expensePanel.add(scrollPane, BorderLayout.CENTER);
 
-        JPanel centerPanel =
-                new JPanel(new BorderLayout(10, 10));
-
-        centerPanel.setBorder(
-                BorderFactory.createEmptyBorder(
-                        0, 20, 0, 20
-                )
-        );
-
-        centerPanel.add(
-                inputPanel,
-                BorderLayout.NORTH
-        );
-
-        centerPanel.add(
-                scrollPane,
-                BorderLayout.CENTER
-        );
+        centerPanel.add(expensePanel);
 
         // =========================
-        // EDIT BUTTON PANEL
+        // Total
         // =========================
+        totalLabel = new JLabel("Total Expense: Rs.0.0");
+        totalLabel.setFont(new Font("Arial", Font.BOLD, 22));
+        totalLabel.setHorizontalAlignment(SwingConstants.CENTER);
 
-        JPanel editPanel =
-                new JPanel(new FlowLayout());
+        centerPanel.add(totalLabel);
 
-        editPanel.add(editButton);
+        mainPanel.add(centerPanel, BorderLayout.CENTER);
 
-        centerPanel.add(
-                editPanel,
-                BorderLayout.SOUTH
-        );
-
-        frame.add(
-                centerPanel,
-                BorderLayout.CENTER
-        );
+        setContentPane(mainPanel);
 
         // =========================
-        // TOTAL LABEL
+        // Button actions
         // =========================
 
-        JLabel totalLabel =
-                new JLabel(
-                        "Total Expense: Rs.0.0",
-                        SwingConstants.CENTER
-                );
+        addButton.addActionListener(e -> addExpense());
 
-        totalLabel.setFont(
-                new Font("Arial", Font.BOLD, 18)
-        );
+        editButton.addActionListener(e -> editExpense());
 
-        totalLabel.setBorder(
-                BorderFactory.createEmptyBorder(
-                        10, 10, 15, 10
-                )
-        );
+        deleteButton.addActionListener(e -> deleteExpense());
 
-        frame.add(
-                totalLabel,
-                BorderLayout.SOUTH
-        );
+        clearButton.addActionListener(e -> clearFields());
 
-        // =========================
-        // DATE FORMAT
-        // =========================
+        // Search while typing
+        searchField.getDocument().addDocumentListener(
+                new javax.swing.event.DocumentListener() {
 
-        DateTimeFormatter formatter =
-                DateTimeFormatter.ofPattern(
-                        "dd-MM-yyyy HH:mm"
-                );
+                    public void insertUpdate(
+                            javax.swing.event.DocumentEvent e) {
+                        refreshExpenseArea();
+                    }
 
-        // =========================
-        // TOTAL EXPENSE
-        // =========================
+                    public void removeUpdate(
+                            javax.swing.event.DocumentEvent e) {
+                        refreshExpenseArea();
+                    }
 
-        final double[] totalExpense = {0};
-
-        // =========================
-        // LOAD SAVED EXPENSES
-        // =========================
-
-        try {
-
-            BufferedReader reader =
-                    new BufferedReader(
-                            new FileReader(FILE_NAME)
-                    );
-
-            String line;
-
-            while ((line = reader.readLine()) != null) {
-
-                if (line.trim().isEmpty()) {
-                    continue;
+                    public void changedUpdate(
+                            javax.swing.event.DocumentEvent e) {
+                        refreshExpenseArea();
+                    }
                 }
+        );
 
-                expenseModel.addElement(line);
+        filterCategoryBox.addActionListener(
+                e -> refreshExpenseArea()
+        );
 
-                double amount =
-                        getAmountFromExpense(line);
+        dateFilterField.getDocument().addDocumentListener(
+                new javax.swing.event.DocumentListener() {
 
-                totalExpense[0] += amount;
-            }
+                    public void insertUpdate(
+                            javax.swing.event.DocumentEvent e) {
+                        refreshExpenseArea();
+                    }
 
-            reader.close();
+                    public void removeUpdate(
+                            javax.swing.event.DocumentEvent e) {
+                        refreshExpenseArea();
+                    }
 
-        } catch (IOException e) {
-
-            // File does not exist yet.
-        }
-
-        totalLabel.setText(
-                "Total Expense: Rs."
-                + totalExpense[0]
+                    public void changedUpdate(
+                            javax.swing.event.DocumentEvent e) {
+                        refreshExpenseArea();
+                    }
+                }
         );
 
         // =========================
-        // SELECT EXPENSE
+        // Select expense by clicking
         // =========================
+        expenseArea.addMouseListener(new MouseAdapter() {
 
-        expenseList.addListSelectionListener(e -> {
+            @Override
+            public void mouseClicked(MouseEvent e) {
 
-            if (!e.getValueIsAdjusting()) {
+                int line;
 
-                int selectedIndex =
-                        expenseList.getSelectedIndex();
-
-                if (selectedIndex != -1) {
-
-                    String selectedExpense =
-                            expenseModel.getElementAt(
-                                    selectedIndex
-                            );
-
-                    amountField.setText(
-                            getAmountFromExpenseAsText(
-                                    selectedExpense
-                            )
+                try {
+                    line = expenseArea.getLineOfOffset(
+                            expenseArea.viewToModel2D(e.getPoint())
                     );
-
-                    categoryBox.setSelectedItem(
-                            getCategoryFromExpense(
-                                    selectedExpense
-                            )
-                    );
-
-                    descriptionField.setText(
-                            getDescriptionFromExpense(
-                                    selectedExpense
-                            )
-                    );
-                }
-            }
-        });
-
-        // =========================
-        // ADD EXPENSE
-        // =========================
-
-        addButton.addActionListener(e -> {
-
-            try {
-
-                double amount =
-                        Double.parseDouble(
-                                amountField.getText()
-                        );
-
-                if (amount <= 0) {
-
-                    JOptionPane.showMessageDialog(
-                            frame,
-                            "Amount must be greater than 0!"
-                    );
-
+                } catch (Exception ex) {
                     return;
                 }
 
-                String category =
-                        (String)
-                        categoryBox.getSelectedItem();
+                String selectedLine;
 
-                String description =
-                        descriptionField.getText().trim();
+                try {
+                    int start = expenseArea.getLineStartOffset(line);
+                    int end = expenseArea.getLineEndOffset(line);
 
-                if (description.isEmpty()) {
+                    selectedLine = expenseArea
+                            .getText(start, end - start)
+                            .trim();
 
-                    description =
-                            "No description";
+                } catch (Exception ex) {
+                    return;
                 }
 
-                String dateTime =
-                        LocalDateTime.now()
-                                .format(formatter);
-
-                String expense =
-                        dateTime
-                        + " | Rs." + amount
-                        + " | " + category
-                        + " | " + description;
-
-                expenseModel.addElement(
-                        expense
-                );
-
-                totalExpense[0] += amount;
-
-                totalLabel.setText(
-                        "Total Expense: Rs."
-                        + totalExpense[0]
-                );
-
-                amountField.setText("");
-                descriptionField.setText("");
-
-                expenseList.clearSelection();
-
-                saveExpenses(
-                        expenseModel
-                );
-
-            } catch (NumberFormatException ex) {
-
-                JOptionPane.showMessageDialog(
-                        frame,
-                        "Please enter a valid amount!"
-                );
+                selectExpense(selectedLine);
             }
         });
+    }
 
-        // =========================
-        // DELETE EXPENSE
-        // =========================
+    // =========================
+    // ADD EXPENSE
+    // =========================
+    private void addExpense() {
 
-        deleteButton.addActionListener(e -> {
+        try {
 
-            int selectedIndex =
-                    expenseList.getSelectedIndex();
+            String amountText = amountField.getText().trim();
+            String description = descriptionField.getText().trim();
+            String category = (String) categoryBox.getSelectedItem();
 
-            if (selectedIndex != -1) {
-
-                String selectedExpense =
-                        expenseModel.getElementAt(
-                                selectedIndex
-                        );
-
-                double amount =
-                        getAmountFromExpense(
-                                selectedExpense
-                        );
-
-                totalExpense[0] -= amount;
-
-                expenseModel.remove(
-                        selectedIndex
-                );
-
-                totalLabel.setText(
-                        "Total Expense: Rs."
-                        + totalExpense[0]
-                );
-
-                amountField.setText("");
-                descriptionField.setText("");
-
-                saveExpenses(
-                        expenseModel
-                );
-
-            } else {
+            if (amountText.isEmpty() || description.isEmpty()) {
 
                 JOptionPane.showMessageDialog(
-                        frame,
-                        "Please select an expense to delete!"
-                );
-            }
-        });
-
-        // =========================
-        // EDIT EXPENSE
-        // =========================
-
-        editButton.addActionListener(e -> {
-
-            int selectedIndex =
-                    expenseList.getSelectedIndex();
-
-            if (selectedIndex == -1) {
-
-                JOptionPane.showMessageDialog(
-                        frame,
-                        "Please select an expense to edit!"
+                        this,
+                        "Please enter amount and description.",
+                        "Missing Information",
+                        JOptionPane.WARNING_MESSAGE
                 );
 
                 return;
             }
 
-            try {
+            double amount = Double.parseDouble(amountText);
 
-                double oldAmount =
-                        getAmountFromExpense(
-                                expenseModel.getElementAt(
-                                        selectedIndex
-                                )
-                        );
-
-                double newAmount =
-                        Double.parseDouble(
-                                amountField.getText()
-                        );
-
-                if (newAmount <= 0) {
-
-                    JOptionPane.showMessageDialog(
-                            frame,
-                            "Amount must be greater than 0!"
-                    );
-
-                    return;
-                }
-
-                String category =
-                        (String)
-                        categoryBox.getSelectedItem();
-
-                String description =
-                        descriptionField.getText().trim();
-
-                if (description.isEmpty()) {
-
-                    description =
-                            "No description";
-                }
-
-                String oldExpense =
-                        expenseModel.getElementAt(
-                                selectedIndex
-                        );
-
-                String dateTime =
-                        getDateTimeFromExpense(
-                                oldExpense,
-                                formatter
-                        );
-
-                String updatedExpense =
-                        dateTime
-                        + " | Rs." + newAmount
-                        + " | " + category
-                        + " | " + description;
-
-                expenseModel.setElementAt(
-                        updatedExpense,
-                        selectedIndex
-                );
-
-                totalExpense[0] =
-                        totalExpense[0]
-                        - oldAmount
-                        + newAmount;
-
-                totalLabel.setText(
-                        "Total Expense: Rs."
-                        + totalExpense[0]
-                );
-
-                amountField.setText("");
-                descriptionField.setText("");
-
-                expenseList.clearSelection();
-
-                saveExpenses(
-                        expenseModel
-                );
+            if (amount <= 0) {
 
                 JOptionPane.showMessageDialog(
-                        frame,
-                        "Expense updated successfully!"
+                        this,
+                        "Amount must be greater than 0.",
+                        "Invalid Amount",
+                        JOptionPane.WARNING_MESSAGE
                 );
 
-            } catch (NumberFormatException ex) {
-
-                JOptionPane.showMessageDialog(
-                        frame,
-                        "Please enter a valid amount!"
-                );
-            }
-        });
-
-        // =========================
-        // CENTER WINDOW
-        // =========================
-
-        frame.setLocationRelativeTo(null);
-
-        // =========================
-        // SHOW WINDOW
-        // =========================
-
-        frame.setVisible(true);
-    }
-
-    // =========================
-    // GET AMOUNT
-    // =========================
-
-    static double getAmountFromExpense(
-            String expense) {
-
-        try {
-
-            String[] parts =
-                    expense.split("\\s*\\|\\s*");
-
-            // Old format:
-            // Rs.200.0 | Food | Lunch
-
-            if (parts[0].startsWith("Rs.")) {
-
-                return Double.parseDouble(
-                        parts[0].substring(3)
-                );
+                return;
             }
 
-            // New format:
-            // date | Rs.200.0 | Food | Lunch
+            String date = new SimpleDateFormat(
+                    "dd-MM-yyyy HH:mm"
+            ).format(new Date());
 
-            return Double.parseDouble(
-                    parts[1].substring(3)
+            Expense expense = new Expense(
+                    date,
+                    amount,
+                    category,
+                    description
             );
 
-        } catch (Exception e) {
+            expenses.add(expense);
 
-            return 0;
+            saveExpenses();
+
+            clearFields();
+
+            refreshExpenseArea();
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Expense added successfully!"
+            );
+
+        } catch (NumberFormatException e) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Please enter a valid amount.",
+                    "Invalid Amount",
+                    JOptionPane.ERROR_MESSAGE
+            );
         }
     }
 
     // =========================
-    // GET AMOUNT AS TEXT
+    // EDIT EXPENSE
     // =========================
+    private void editExpense() {
 
-    static String getAmountFromExpenseAsText(
-            String expense) {
+        if (selectedExpenseIndex == -1) {
 
-        double amount =
-                getAmountFromExpense(expense);
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Please click an expense first.",
+                    "No Expense Selected",
+                    JOptionPane.WARNING_MESSAGE
+            );
 
-        return String.valueOf(amount);
-    }
-
-    // =========================
-    // GET CATEGORY
-    // =========================
-
-    static String getCategoryFromExpense(
-            String expense) {
+            return;
+        }
 
         try {
 
-            String[] parts =
-                    expense.split("\\s*\\|\\s*");
+            String amountText = amountField.getText().trim();
+            String description = descriptionField.getText().trim();
+            String category = (String) categoryBox.getSelectedItem();
 
-            // Old format:
-            // Rs.200.0 | Food | Lunch
+            if (amountText.isEmpty() || description.isEmpty()) {
 
-            if (parts[0].startsWith("Rs.")) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Please enter amount and description."
+                );
 
-                return parts[1];
+                return;
             }
 
-            // New format:
-            // date | Rs.200.0 | Food | Lunch
+            double amount = Double.parseDouble(amountText);
 
-            return parts[2];
+            if (amount <= 0) {
 
-        } catch (Exception e) {
+                JOptionPane.showMessageDialog(
+                        this,
+                        "Amount must be greater than 0."
+                );
 
-            return "Other";
+                return;
+            }
+
+            Expense oldExpense = expenses.get(selectedExpenseIndex);
+
+            oldExpense.amount = amount;
+            oldExpense.category = category;
+            oldExpense.description = description;
+
+            saveExpenses();
+
+            selectedExpenseIndex = -1;
+
+            clearFields();
+
+            refreshExpenseArea();
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Expense edited successfully!"
+            );
+
+        } catch (NumberFormatException e) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Please enter a valid amount."
+            );
         }
     }
 
     // =========================
-    // GET DESCRIPTION
+    // DELETE EXPENSE
     // =========================
+    private void deleteExpense() {
 
-    static String getDescriptionFromExpense(
-            String expense) {
+        if (selectedExpenseIndex == -1) {
 
-        try {
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Please click an expense first.",
+                    "No Expense Selected",
+                    JOptionPane.WARNING_MESSAGE
+            );
 
-            String[] parts =
-                    expense.split("\\s*\\|\\s*");
+            return;
+        }
 
-            // Old format
+        int answer = JOptionPane.showConfirmDialog(
+                this,
+                "Are you sure you want to delete this expense?",
+                "Confirm Delete",
+                JOptionPane.YES_NO_OPTION
+        );
 
-            if (parts[0].startsWith("Rs.")) {
+        if (answer == JOptionPane.YES_OPTION) {
 
-                if (parts.length >= 3) {
+            expenses.remove(selectedExpenseIndex);
 
-                    return parts[2];
+            saveExpenses();
+
+            selectedExpenseIndex = -1;
+
+            clearFields();
+
+            refreshExpenseArea();
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Expense deleted successfully!"
+            );
+        }
+    }
+
+    // =========================
+    // SELECT EXPENSE
+    // =========================
+    private void selectExpense(String selectedLine) {
+
+        for (int i = 0; i < expenses.size(); i++) {
+
+            Expense expense = expenses.get(i);
+
+            if (expense.toString().equals(selectedLine)) {
+
+                selectedExpenseIndex = i;
+
+                amountField.setText(
+                        String.valueOf(expense.amount)
+                );
+
+                categoryBox.setSelectedItem(
+                        expense.category
+                );
+
+                descriptionField.setText(
+                        expense.description
+                );
+
+                break;
+            }
+        }
+    }
+
+    // =========================
+    // CLEAR FIELDS
+    // =========================
+    private void clearFields() {
+
+        amountField.setText("");
+        descriptionField.setText("");
+
+        categoryBox.setSelectedIndex(0);
+
+        selectedExpenseIndex = -1;
+    }
+
+    // =========================
+    // REFRESH EXPENSE DISPLAY
+    // =========================
+    private void refreshExpenseArea() {
+
+        expenseArea.setText("");
+
+        String searchText =
+                searchField == null
+                        ? ""
+                        : searchField.getText()
+                                .trim()
+                                .toLowerCase();
+
+        String selectedCategory =
+                filterCategoryBox == null
+                        ? "All Categories"
+                        : (String) filterCategoryBox
+                                .getSelectedItem();
+
+        String dateFilter =
+                dateFilterField == null
+                        ? ""
+                        : dateFilterField.getText()
+                                .trim();
+
+        double total = 0;
+
+        for (Expense expense : expenses) {
+
+            // =========================
+            // Search filter
+            // =========================
+            if (!searchText.isEmpty()) {
+
+                if (!expense.description
+                        .toLowerCase()
+                        .contains(searchText)) {
+
+                    continue;
                 }
-
-                return "";
             }
 
-            // New format
+            // =========================
+            // Category filter
+            // =========================
+            if (!selectedCategory.equals("All Categories")) {
 
-            if (parts.length >= 4) {
+                if (!expense.category.equals(
+                        selectedCategory)) {
 
-                return parts[3];
+                    continue;
+                }
             }
 
-            return "";
+            // =========================
+            // Date filter
+            // =========================
+            if (!dateFilter.isEmpty()) {
 
-        } catch (Exception e) {
+                if (!expense.date.startsWith(dateFilter)) {
 
-            return "";
-        }
-    }
-
-    // =========================
-    // GET DATE/TIME
-    // =========================
-
-    static String getDateTimeFromExpense(
-            String expense,
-            DateTimeFormatter formatter) {
-
-        try {
-
-            String[] parts =
-                    expense.split("\\s*\\|\\s*");
-
-            // New format:
-            // date | Rs.200.0 | Food | Lunch
-
-            if (!parts[0].startsWith("Rs.")) {
-
-                return parts[0];
+                    continue;
+                }
             }
 
-        } catch (Exception e) {
+            expenseArea.append(
+                    expense.toString() + "\n"
+            );
 
-            // Ignore and use current date/time.
+            total += expense.amount;
         }
 
-        // Old-format expense
-        // gets a date/time when edited.
-
-        return LocalDateTime.now()
-                .format(formatter);
+        totalLabel.setText(
+                "Total Expense: Rs." + total
+        );
     }
 
     // =========================
     // SAVE EXPENSES
     // =========================
+    private void saveExpenses() {
 
-    static void saveExpenses(
-            DefaultListModel<String> expenseModel) {
+        try (PrintWriter writer = new PrintWriter(
+                new FileWriter(FILE_NAME))) {
 
-        try {
+            for (Expense expense : expenses) {
 
-            BufferedWriter writer =
-                    new BufferedWriter(
-                            new FileWriter(FILE_NAME)
-                    );
-
-            for (int i = 0;
-                 i < expenseModel.size();
-                 i++) {
-
-                writer.write(
-                        expenseModel.getElementAt(i)
+                writer.println(
+                        expense.toString()
                 );
-
-                writer.newLine();
             }
-
-            writer.close();
 
         } catch (IOException e) {
 
-            System.out.println(
-                    "Error saving expenses."
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Error saving expenses:\n"
+                            + e.getMessage(),
+                    "File Error",
+                    JOptionPane.ERROR_MESSAGE
             );
         }
+    }
+
+    // =========================
+    // LOAD EXPENSES
+    // =========================
+    private void loadExpenses() {
+
+        File file = new File(FILE_NAME);
+
+        if (!file.exists()) {
+            return;
+        }
+
+        try (BufferedReader reader = new BufferedReader(
+                new FileReader(file))) {
+
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+
+                line = line.trim();
+
+                if (line.isEmpty()) {
+                    continue;
+                }
+
+                parseExpense(line);
+            }
+
+        } catch (IOException e) {
+
+            JOptionPane.showMessageDialog(
+                    this,
+                    "Error loading expenses:\n"
+                            + e.getMessage(),
+                    "File Error",
+                    JOptionPane.ERROR_MESSAGE
+            );
+        }
+    }
+
+    // =========================
+    // PARSE OLD + NEW FORMAT
+    // =========================
+    private void parseExpense(String line) {
+
+        try {
+
+            String[] parts = line.split("\\|");
+
+            for (int i = 0; i < parts.length; i++) {
+                parts[i] = parts[i].trim();
+            }
+
+            // New format:
+            // date | Rs.amount | category | description
+            if (parts.length == 4) {
+
+                String date = parts[0];
+
+                String amountText = parts[1]
+                        .replace("Rs.", "")
+                        .trim();
+
+                double amount =
+                        Double.parseDouble(amountText);
+
+                String category = parts[2];
+
+                String description = parts[3];
+
+                expenses.add(
+                        new Expense(
+                                date,
+                                amount,
+                                category,
+                                description
+                        )
+                );
+
+                return;
+            }
+
+            // Old format:
+            // Rs.amount | category | description
+            if (parts.length == 3) {
+
+                String amountText = parts[0]
+                        .replace("Rs.", "")
+                        .trim();
+
+                double amount =
+                        Double.parseDouble(amountText);
+
+                String category = parts[1];
+
+                String description = parts[2];
+
+                String date = "Old";
+
+                expenses.add(
+                        new Expense(
+                                date,
+                                amount,
+                                category,
+                                description
+                        )
+                );
+            }
+
+        } catch (Exception e) {
+
+            System.out.println(
+                    "Could not read expense: " + line
+            );
+        }
+    }
+
+    // =========================
+    // MAIN
+    // =========================
+    public static void main(String[] args) {
+
+        SwingUtilities.invokeLater(() -> {
+
+            JavaExpenseTracker app =
+                    new JavaExpenseTracker();
+
+            app.setVisible(true);
+        });
     }
 }
